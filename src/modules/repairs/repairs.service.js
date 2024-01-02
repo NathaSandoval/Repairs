@@ -15,8 +15,11 @@ export class RepairService {
     static async findAll(){
         return await Repair.findAll({
             where: {
-                status: 'pending'
-            }
+                status: ['pending', 'completed']
+            },
+            include: [{
+                model: User,
+            }]
 
         })
 

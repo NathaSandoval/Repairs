@@ -1,104 +1,97 @@
-import { UserService } from "./users.service.js"
+import { AppError } from '../../common/errors/appError.js';
+import { catchAsync } from '../../common/errors/catchAsync.js';
+import { verifyPassword } from '../../config/plugin/encripted-password.plugin.js';
+import generateJWT from '../../config/plugin/generate-jwt.plugin.js';
+import { validateUser, validateLogin } from './user.schema.js'
+import { UserService } from './users.service.js';
+
+export const login = catchAsync(async (req, res, next) => {
+  const { hasError, errorMessages, userData } = validateLogin(req.body);
+
+  if (hasError) {
+    return res.status(422).json({
+      status: 'error',
+      message: errorMessages,
+    });
+  }
+
+  const user = await UserService.findOneByEmail(email);
+
+  if (!user) {
+    return next(new AppError("user not found", 404));
+  }
+
+  const isCorrectPassword = await verifyPassword(password, user.password);
+
+  if (!isCorrectPassword) {
+    return next(new AppError("invalid credentials", 401));
+  }
+
+  const token = await generateJWT(user.id);
+
+  return res.status(200).json({
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+    },
+  });
+});
+
+export const findAllUsers = catchAsync(async (req, res,) => {
+    const { user } = req;
+
+    return res.status(200).json(user);
+  
+  })
 
 
-export const findAllUsers = async(req,res) => {
-    try {
+export const createUser = catchAsync(async (req, res) => {
+    const { hasError, errorMessages, userData } = validateUser(req.body);
 
-        const users = await UserService.findAll()
-
-        return res.status(200).json(users)
-
-    }catch (error){
-        return res.status(500).json({
-            status: 'fail',
-            message: 'Sometihing went very wrong! '
-        })
+    if (hasError) {
+      return res.status(422).json({
+        status: 'error',
+        message: errorMessages,
+      });
     }
-}
-export const createUser = async(req, res) => {
-    try {
 
-        const { name, email,password, role } = req.body;
+    const user = await UserService.create(userData);
 
-        const user = await UserService.create({ name, email,password, role })
-        
-        return res.status(201).json(user)
+    const token = await generateJWT(user.id);
 
-    }catch (error){
-        return res.status(500).json({
-            status: 'fail',
-            message: 'Sometihing went very wrong! '
-        })
-    }
-}
-export const findOneUser = async(req,res) => {
-    try {
-        const { id } = req.params;
+    return res.status(201).json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+      },
+    });
+  }) 
 
-        const user = await UserService.findOne(id);
+  
 
-        if(!user){
-            return res.status(404).json({
-                status: 'error',
-                message: 'user not found'
-            })
-        } 
+export const findOneUser = catchAsync(async (req, res, next) => {
+  const { user } = req;
 
-        return res.status(200).json(user)
+  return res.status(200).json(user);
+});
 
-    }catch (error){
-        return res.status(500).json({
-            status: 'fail',
-            message: 'Sometihing went very wrong! '
-        })
-    }
-}
-export const updateUser = async(req,res) => {
-    try {
-        const { id } = req.params;
-        const { name, email } = req.body;
+export const updateUser = catchAsync(async (req, res) => {
+ 
+    const { user } = req;
 
-        const user = await UserService.findOne(id);
+    return res.status(200).json(user);
+  }) 
 
-        if(!user){
-            return res.status(404).json({
-                status: 'error',
-                message: 'user not found'
-            })
-        } 
 
-        const userUpdated = await UserService.update(user, { name, email })
+export const deleteUser = catchAsync(async (req, res) => {
 
-        return res.status(200).json(userUpdated)
+    const { user } = req;
 
-    }catch (error){
-        return res.status(500).json({
-            status: 'fail',
-            message: 'Sometihing went very wrong! '
-        })
-    }
-}
-export const deleteUser = async(req,res) => {
-    try {
-        const { id } = req.params;
+    await UserService.delete(user);
 
-        const user = await UserService.findOne(id);
+    return res.status(204).json(null);
+  
+  })
 
-        if(!user){
-            return res.status(404).json({
-                status: 'error',
-                message: 'user not found'
-            })
-        } 
-
-        await UserService.delete(user)
-
-        return res.status(204).json(null)
-
-    }catch (error){
-        return res.status(500).json({
-            status: 'fail',
-            message: 'Sometihing went very wrong! '
-        })
-    }
-}

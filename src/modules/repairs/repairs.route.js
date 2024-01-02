@@ -1,15 +1,19 @@
 import express from 'express';
 import { deleteRepair, findAllRepairs, updateRepair, createRepair,findOneRepair } from './repairs.controller.js';
+import { validExistRepair } from './repairs.middleware.js';
+import { protect, restrictTo } from '../users/user.middleware.js';
 
 export const router = express.Router();
 
+router.use(protect)
+
 router
 .route('/')
-.get(findAllRepairs)
+.get(restrictTo("employee"), findAllRepairs)
 .post(createRepair)
 
 router
 .route('/:id')
-.get(findOneRepair)
-.patch(updateRepair)
-.delete(deleteRepair)
+.get(validExistRepair, restrictTo("employee"), findOneRepair)
+.patch(validExistRepair, restrictTo("employee"), updateRepair)
+.delete(validExistRepair, restrictTo("employee"), deleteRepair)
